@@ -1,0 +1,42 @@
+﻿@page "/converter"
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Converter</PageTitle>
+
+
+<MudFileUpload T="IBrowserFile" FilesChanged="Convert" Accept=".txt">
+    <ActivatorContent>
+        <MudButton>Convert</MudButton>
+    </ActivatorContent>
+</MudFileUpload>
+<br />
+
+<MudText>File Content: @fileContent</MudText>
+
+@code {
+    private bool arrows = true;
+    private bool bullets = true;
+    private bool enableSwipeGesture = true;
+    private bool autocycle = true;
+    private Transition transition = Transition.Fade;
+
+    IList<IBrowserFile> _files = new List<IBrowserFile>();
+    private string fileContent { get; set; }
+
+    private async void Convert(IBrowserFile file)
+    {
+        long maxsize = file.Size;
+        var buffer = new byte[file.Size];
+        await file.OpenReadStream(maxsize).ReadAsync(buffer);
+        fileContent = System.Text.Encoding.UTF8.GetString(buffer);
+
+
+
+        fileContent = fileContent + " <<---  OLD CONTENT NEW -->> Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque sit amet lacinia augue. Mauris finibus vestibulum lectus vel pellentesque. Praesent molestie metus id augue elementum suscipit vitae in erat. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras et congue ligula, eget lacinia sapien. Quisque volutpat augue elit. Proin facilisis libero vitae tincidunt pharetra. Quisque non nisl eget nibh tempor vestibulum at in diam. Curabitur mi elit, aliquet fermentum vulputate a, tempor quis metus. In ipsum neque, tincidunt id facilisis sit amet, molestie nec nisi. Sed sodales congue libero id convallis. Aenean luctus pellentesque lectus dapibus facilisis. Proin id massa nec eros consectetur semper non et lorem.";
+        StateHasChanged();
+        await JSRuntime.InvokeAsync<object>("saveFile", "testexport.txt", fileContent);
+
+
+    }
+
+}
