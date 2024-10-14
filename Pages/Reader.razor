@@ -1,0 +1,170 @@
+﻿@page "/reader"
+@using System.Xml.Serialization
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Converter</PageTitle>
+
+<style>
+    .articlehead {
+        background-color:lightgrey;
+    }
+</style>
+
+<MudFileUpload T="IBrowserFile" FilesChanged="Convert" Accept=".xml">
+    <ActivatorContent>
+        <MudButton>Convert</MudButton>
+    </ActivatorContent>
+</MudFileUpload>
+<br />
+
+@* <MudDataGrid Items="@listDataSet.Kalkulation" T="ListKalkulationsstruktur">
+    <Columns>
+        <HierarchyColumn T="ListProjektkosten" />
+        <PropertyColumn Property="x => x.Position" Title="Position" />
+        <PropertyColumn Property="x => x.Bezeichnung" Title="Bezeichnung" />
+        <PropertyColumn Property="x => x.Anzahl" Title="Menge" />
+        <PropertyColumn Property="x => x.MengenEinheit" Title="Mengeneinheit" />
+        <PropertyColumn Property="x => x.Breite" Title="Breite" />
+    </Columns>
+    <ChildRowContent>
+        <MudCard>
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">@context.Item.Bezeichnung</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudText>This element is number @context.Item.Anzahl</MudText>
+                <MudText>This element has a molar mass of @context.Item.Anzahl</MudText>
+            </MudCardContent>
+        </MudCard>
+    </ChildRowContent>
+</MudDataGrid> *@
+
+<MudTable Items="@listDataSet.Kalkulation" Hover="true" Breakpoint="Breakpoint.Sm">
+    <ColGroup>
+        <col style="width:300px;" />
+        <col style="width:100px;" />
+        <col />
+        <col style="width:100px;" />
+    </ColGroup>
+    <HeaderContent>
+        <MudTh></MudTh>
+        <MudTh>Position</MudTh>
+        <MudTh>Bezeichnung</MudTh>
+        <MudTh>Menge</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd><MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => ShowBtnPress(context.PosNr))">@((context.ShowDetails == true) ? "Hide" : "Show") ShowDetails </MudButton></MudTd>
+        <MudTd DataLabel="Position">@context.Position</MudTd>
+        <MudTd DataLabel="Bezeichnung">@context.Bezeichnung</MudTd>
+        <MudTd DataLabel="Menge">@context.Anzahl</MudTd>
+    </RowTemplate>
+    <ChildRowContent>
+        @if (context.ShowDetails)
+        {
+            <MudTr>
+                <td colspan="4">
+                    <MudCard Elevation="0">
+                        <MudCardContent Class="ps-5">
+                            <MudTable Items="@context.Projektkosten" Context="CostContext" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0">
+                                <ColGroup>
+                                    <col />
+                                    <col />
+                                    <col />
+                                </ColGroup>
+                                <HeaderContent>
+                                    <MudTh>Kostenart</MudTh>
+                                    <MudTh>Bezeichnung</MudTh>
+                                    <MudTh>Wert</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd DataLabel="Kostenart">@CostContext.Kostenart</MudTd>
+                                    <MudTd DataLabel="Bezeichnung">@CostContext.Bezeichnung</MudTd>
+                                    <MudTd DataLabel="Wert">@CostContext.Wert</MudTd>
+                                </RowTemplate>
+                                <ChildRowContent>
+                                        <MudTr>
+                                            <td colspan="4">
+                                                <MudCard Elevation="0" >
+                                                    <MudCardContent Class="ps-5">
+                                                        <MudTable Items="@CostContext.ProjektArtikel" Context="ArticleContext" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" HeaderClass="articlehead">
+                                                            <ColGroup>
+                                                                <col />
+                                                                <col />
+                                                                <col />
+                                                            </ColGroup>
+                                                            <HeaderContent>
+                                                                <MudTh>ArtikelNr</MudTh>
+                                                                <MudTh>Artikelbezeichnung</MudTh>
+                                                                <MudTh>Gesamtpreis</MudTh>
+                                                            </HeaderContent>
+                                                            <RowTemplate>
+                                                                <MudTd DataLabel="ArtikelNr">@ArticleContext.ArtikelNr</MudTd>
+                                                                <MudTd DataLabel="Artikelbezeichnung">@ArticleContext.Artikelbezeichnung</MudTd>
+                                                                <MudTd DataLabel="Gesamtpreis">@ArticleContext.Gesamtpreis</MudTd>
+                                                            </RowTemplate>
+
+                                                        </MudTable>
+                                                    </MudCardContent>
+                                                </MudCard>
+                                            </td>
+                                        </MudTr>
+                                </ChildRowContent>
+                            </MudTable>
+                        </MudCardContent>
+                    </MudCard>
+                </td>
+            </MudTr>
+        }
+    </ChildRowContent>
+</MudTable>
+
+@code {
+    private bool arrows = true;
+    private bool bullets = true;
+    private bool enableSwipeGesture = true;
+    private bool autocycle = true;
+    private Transition transition = Transition.Fade;
+
+    IList<IBrowserFile> _files = new List<IBrowserFile>();
+    private NewDataSet newDataSet { get; set; } = new NewDataSet();
+    private ListDataSet listDataSet { get; set; } = new ListDataSet();
+
+    private string fileContent { get; set; }
+
+    private async void Convert(IBrowserFile file)
+    {
+        long maxsize = file.Size;
+        var buffer = new byte[file.Size];
+        await file.OpenReadStream(maxsize).ReadAsync(buffer);
+        fileContent = System.Text.Encoding.UTF8.GetString(buffer);
+
+        XmlSerializer serializer = new XmlSerializer(typeof(NewDataSet));
+        using (TextReader reader = new StringReader(fileContent))
+        {
+            newDataSet = (NewDataSet)serializer.Deserialize(reader);
+        }
+
+        listDataSet = newDataSet.GetList();
+
+
+        StateHasChanged();
+
+
+
+
+
+
+        // fileContent = fileContent + " <<---  OLD CONTENT NEW -->> Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque sit amet lacinia augue. Mauris finibus vestibulum lectus vel pellentesque. Praesent molestie metus id augue elementum suscipit vitae in erat. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras et congue ligula, eget lacinia sapien. Quisque volutpat augue elit. Proin facilisis libero vitae tincidunt pharetra. Quisque non nisl eget nibh tempor vestibulum at in diam. Curabitur mi elit, aliquet fermentum vulputate a, tempor quis metus. In ipsum neque, tincidunt id facilisis sit amet, molestie nec nisi. Sed sodales congue libero id convallis. Aenean luctus pellentesque lectus dapibus facilisis. Proin id massa nec eros consectetur semper non et lorem.";
+        // StateHasChanged();
+        // await JSRuntime.InvokeAsync<object>("saveFile", "testexport.txt", fileContent);
+
+
+    }
+    private void ShowBtnPress(int nr)
+    {
+        ListKalkulationsstruktur tmpPerson = listDataSet.Kalkulation.First(f => f.PosNr == nr);
+        tmpPerson.ShowDetails = !tmpPerson.ShowDetails;
+    }
+}
